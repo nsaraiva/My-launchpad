@@ -11,17 +11,43 @@ const LaunchRequestHandler = {
     },
     async handle(handlerInput) {
         let speakOutput = 'Vou verificar.';
+        let winOpenDate;
+        let today;
+        let launchTime;
+        let hasLaunch;
+        
+        // Get today's date without time
+        // Time zone in Brasilia/Brazil - Federal District (GMT-3)
+        today = new Date();
+        today.setHours( today.getHours() - 3 ); 
+        today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         
         await getRemoteData('https://fdo.rocketlaunch.live/json/launches/next/5')
         .then((response) => {  
-            const data = JSON.parse(response);  
-            speakOutput = `${speakOutput} ${data.result[0].launch_description}`;
+            const data = JSON.parse(response); 
+            for (let i = 0; i < data.result.length; i += 1) {
+                // Get window start date without time
+                // Time zone in Brasilia/Brazil - Federal District (GMT-3) 
+                winOpenDate = new Date(data.result[i].win_open);
+                winOpenDate = new Date(winOpenDate.setHours( winOpenDate.getHours() - 3 ));
+                //winOpenDate = new Date(winOpenDate);
+                winOpenDate = new Date(winOpenDate.getFullYear(), winOpenDate.getMonth(), winOpenDate.getDate());
+                
+                // Get the today's mission
+                if(winOpenDate.toString() === today.toString()){
+                    speakOutput = `${speakOutput} ${data.result[i].launch_description}`;
+                    hasLaunch = true;
+                }
+                
+                if(!hasLaunch){
+                    speakOutput = 'Vou verificar. Não existem lançamentos para hoje.';
+                }
+            }
         })
         .catch((err) => {  
-            console.log(`ERROR: ${err.message}`);  
-        });  
-  
-
+            speakOutput = `${speakOutput} Não foi possível acessar a agenda de lançamentos.`; // ${err.message}`;
+        }); 
+        
         return handlerInput.responseBuilder
             .speak(speakOutput)
             //.reprompt(speakOutput)
