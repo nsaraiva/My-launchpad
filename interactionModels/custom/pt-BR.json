@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "tem lançamento hoje",
+      "invocationName": "tem algum lançamento pra hoje",
       "intents": [
         {
           "name": "AMAZON.CancelIntent",
@@ -36,5 +36,5 @@
       "types": []
     }
   },
-  "version": "2"
+  "version": "4"
 }

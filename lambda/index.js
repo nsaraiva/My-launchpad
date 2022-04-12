@@ -10,21 +10,50 @@ const LaunchRequestHandler = {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     async handle(handlerInput) {
-        let speakOutput = 'Vou verificar.';
+        let speakOutput = '';
+        let winOpenDate;
+        let today;
+        let launchTime;
+        let hasLaunch;
+        
+        // Get today's date without time
+        // Time zone in Brasilia/Brazil - Federal District (GMT-3)
+        today = new Date();
+        today.setHours( today.getHours() - 3 ); 
+        today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         
         await getRemoteData('https://fdo.rocketlaunch.live/json/launches/next/5')
         .then((response) => {  
-            const data = JSON.parse(response);  
-            speakOutput = `${speakOutput} ${data.result[0].launch_description}`;
+            const data = JSON.parse(response); 
+            for (let i = 0; i < data.result.length; i += 1) {
+                // Get window start date without time
+                // Time zone in Brasilia/Brazil - Federal District (GMT-3) 
+                winOpenDate = new Date(data.result[i].win_open);
+                winOpenDate = new Date(winOpenDate.setHours( winOpenDate.getHours() - 3 ));
+                launchTime = winOpenDate.getHours() + ":" + winOpenDate.getMinutes();
+                winOpenDate = new Date(winOpenDate.getFullYear(), winOpenDate.getMonth(), winOpenDate.getDate());
+                
+                
+                
+                // Get the today's mission
+                if(winOpenDate.toString() === today.toString()){
+                    speakOutput = `${speakOutput} O foguete ${data.result[i].provider.name} ${data.result[i].vehicle.name} irá lançar a missão ${data.result[i].name} às ${launchTime}`;
+                    hasLaunch = true;
+                }
+                
+                if(!hasLaunch){
+                    speakOutput = 'Não existem lançamentos para hoje';
+                }
+            }
         })
         .catch((err) => {  
-            console.log(`ERROR: ${err.message}`);  
-        });  
-  
-
+            speakOutput = `Não foi possível acessar a agenda de lançamentos, tente mais tarde`;
+        }); 
+        
+        speakOutput = `Vou verificar.<break time="2s"/> ${speakOutput}.`;
+        
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            //.reprompt(speakOutput)
             .getResponse();
     }
 };
@@ -41,21 +70,6 @@ const getRemoteData = (url) => new Promise((resolve, reject) => {
   });  
   request.on('error', (err) => reject(err));  
 });  
-
-const HelloWorldIntentHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'HelloWorldIntent';
-    },
-    handle(handlerInput) {
-        const speakOutput = 'Hello World!';
-
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
-            .getResponse();
-    }
-};
 
 const HelpIntentHandler = {
     canHandle(handlerInput) {
@@ -167,7 +181,6 @@ const ErrorHandler = {
 exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         LaunchRequestHandler,
-        HelloWorldIntentHandler,
         HelpIntentHandler,
         CancelAndStopIntentHandler,
         FallbackIntentHandler,
